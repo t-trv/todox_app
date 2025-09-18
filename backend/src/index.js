@@ -3,24 +3,32 @@ import express from 'express';
 import taskRoute from './routes/tasksRouters.js';
 import { connectDB } from './config/db.js';
 import dotenv from 'dotenv';
+import path from 'path';
 
 dotenv.config();
 
-const app = express();
-
 const PORT = process.env.PORT || 3001;
-
-app.use(express.json())
-
+const app = express();
+const __dirname = path.resolve();
 
 // middle ware
-app.use(cors({ origin: "http://localhost:5173" }));
-app.use("/api/tasks", taskRoute);
+app.use(express.json());
 
+if (process.env.NODE_ENV !== 'production') {
+    app.use(cors({ origin: 'http://localhost:5173' }));
+}
 
-// Kết nối tới database trước rồi mới chạy server ở cổng 3001
+app.use('/api/tasks', taskRoute);
+
+if (process.env.NODE_ENV === 'production') {
+    app.use(express.static(path.join(__dirname, '../frontend/dist')));
+    app.get('*', (req, res) => {
+        res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
+    });
+}
+
 connectDB().then(() => {
     app.listen(PORT, () => {
-        console.log("Server is running...", {PORT})
-    })
-})
+        console.log('Server is running...', { PORT });
+    });
+});
